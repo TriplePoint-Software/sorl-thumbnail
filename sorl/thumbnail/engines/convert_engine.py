@@ -25,13 +25,21 @@ class Engine(EngineBase):
         """
         Writes the thumbnail image
         """
+
         if (options['format'] == 'JPEG' and options.get('progressive',
                                                         settings.THUMBNAIL_PROGRESSIVE)):
             image['options']['interlace'] = 'line'
         image['options']['quality'] = options['quality']
 
         args = settings.THUMBNAIL_CONVERT.split(' ')
-        args.append(image['source'] + '[0]')
+        if not settings.THUMBNAIL_CONVERT_ALL:
+            suffix = '.%s' % EXTENSIONS[options['format']]
+            args.append(image['source'] + '[0]')
+        else:
+            suffix = '-%02d' + '.%s' % EXTENSIONS[options['format']]
+            #don't assume that the user only wants the first page. Get it from settings.
+            args.append(image['source'])
+
 
         for k in image['options']:
             v = image['options'][k]
@@ -46,19 +54,21 @@ class Engine(EngineBase):
         if settings.THUMBNAIL_FLATTEN and not flatten == "off":
             args.append('-flatten')
 
-        suffix = '.%s' % EXTENSIONS[options['format']]
+        path, filename = thumbnail.name.rsplit('/', 1)
+        abspath = os.path.abspath('media/' + path)
+        if not os.path.exists(abspath):
+            os.makedirs(abspath)
+        args.append('+adjoin')
+        filename, ext = filename.split('.')
+        args.append(abspath + os.sep + filename + suffix)
+        args = map(smart_str, args)
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.wait()
+        out, err = p.communicate()
 
-        with NamedTemporaryFile(suffix=suffix, mode='rb') as fp:
-            args.append(fp.name)
-            args = map(smart_str, args)
-            p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            p.wait()
-            out, err = p.communicate()
+        if err:
+            raise Exception(err)
 
-            if err:
-                raise Exception(err)
-
-            thumbnail.write(fp.read())
 
     def cleanup(self, image):
         os.remove(image['source'])  # we should not need this now
