@@ -32,14 +32,14 @@ class Engine(EngineBase):
         image['options']['quality'] = options['quality']
 
         args = settings.THUMBNAIL_CONVERT.split(' ')
-        if not settings.THUMBNAIL_CONVERT_ALL:
+
+        #user can specify if the call to get_thumbnail if he wants all pages thumbnails
+        if not options.get('all_'):
             suffix = '.%s' % EXTENSIONS[options['format']]
             args.append(image['source'] + '[0]')
         else:
             suffix = '-%02d' + '.%s' % EXTENSIONS[options['format']]
-            #don't assume that the user only wants the first page. Get it from settings.
             args.append(image['source'])
-
 
         for k in image['options']:
             v = image['options'][k]

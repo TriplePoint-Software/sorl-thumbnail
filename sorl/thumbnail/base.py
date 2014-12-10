@@ -192,6 +192,6 @@ class ThumbnailBackend(object):
         """
         key = tokey(source.key, geometry_string, serialize(options))
         # make some subdirs
-        path = '%s/%s/%s' % (key[:2], key[2:4], key)
+        path = '%s/%s/%s/%s' % (geometry_string, key[:2], key[2:4], key)
         return '%s%s.%s' % (settings.THUMBNAIL_PREFIX, path,
                             EXTENSIONS[options['format']])
