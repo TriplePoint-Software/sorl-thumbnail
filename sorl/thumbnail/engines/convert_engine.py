@@ -32,6 +32,11 @@ class Engine(EngineBase):
         image['options']['quality'] = options['quality']
 
         args = settings.THUMBNAIL_CONVERT.split(' ')
+        #for density order matters, it should come before the source file.
+        for option in ['density', 'sharpen']:
+            if options.get(option):
+                args.append('-' + option)
+                args.append(options[option])
 
         #user can specify if the call to get_thumbnail if he wants all pages thumbnails
         if not options.get('all_'):
