@@ -2,7 +2,6 @@ import logging
 
 import os
 import re
-import glob
 from sorl.thumbnail.compat import string_type, text_type
 from sorl.thumbnail.conf import settings, defaults as default_settings
 from sorl.thumbnail.helpers import tokey, serialize
@@ -91,29 +90,12 @@ class ThumbnailBackend(object):
         thumbnail = ImageFile(name, default.storage)
         cached = default.kvstore.get(thumbnail)
 
-        if cached and options.get('use_cache') != False:
+        if cached:
             return cached
 
         # We have to check exists() because the Storage backend does not
         # overwrite in some implementations.
-        thumbnail_exists = thumbnail.exists()
-        if options.get('use_cache') == False:
-            path = os.path.join('media', name.rsplit('/', 1)[0], '*')
-            logger.debug("path: %s" % path)
-            thumbnail_paths = ['/'+ e for e in glob.glob(path) if e.find('-') != -1] 
-            logger.debug("count of thumbnail_paths: %s" % len(thumbnail_paths))
-            if not thumbnail_paths:
-                logger.debug('all pdf thumbs were not found, so recreating')
-                if thumbnail_exists:
-                    thumbnail.delete()
-                    thumbnail = ImageFile(name, default.storage)
-            else:
-                logger.debug('all pdf thumbs found, NOT recreating')
-                thumbnail_exists = True
-
-        logger.debug("thumbnail_exists: %s" % thumbnail_exists)
-        if not thumbnail_exists:
-            logger.info(text_type('generating thumbnail for [%s] at [%s]'), file_, geometry_string)
+        if not thumbnail.exists():
             try:
                 source_image = default.engine.get_image(source)
             except IOError:
@@ -208,11 +190,8 @@ class ThumbnailBackend(object):
         """
         Computes the destination filename.
         """
-        thumbnail_options = options.copy()
-        thumbnail_options.pop('use_cache', None)
-        thumbnail_options.pop('all_', None)
-        key = tokey(source.key, geometry_string, serialize(thumbnail_options))
+        key = tokey(source.key, geometry_string, serialize(options))
         # make some subdirs
         path = '%s/%s/%s/%s' % (geometry_string, key[:2], key[2:4], key)
         return '%s%s.%s' % (settings.THUMBNAIL_PREFIX, path,
-                            EXTENSIONS[thumbnail_options['format']])
+                            EXTENSIONS[options['format']])
