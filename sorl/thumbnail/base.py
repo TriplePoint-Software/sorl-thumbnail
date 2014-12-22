@@ -107,7 +107,6 @@ class ThumbnailBackend(object):
                 if thumbnail_exists:
                     thumbnail.delete()
                     thumbnail = ImageFile(name, default.storage)
-                    thumbnail_exists = False
             else:
                 logger.debug('all pdf thumbs found, NOT recreating')
                 thumbnail_exists = True
