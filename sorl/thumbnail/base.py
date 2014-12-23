@@ -90,11 +90,13 @@ class ThumbnailBackend(object):
         thumbnail = ImageFile(name, default.storage)
         cached = default.kvstore.get(thumbnail)
 
-        if cached:
+        if cached and options.get('all_')!=1:
+            logger.info('returning cached!')
             return cached
 
         # We have to check exists() because the Storage backend does not
         # overwrite in some implementations.
+        logger.info("thumbnail.exists: %s" % thumbnail.exists())
         if not thumbnail.exists():
             try:
                 source_image = default.engine.get_image(source)
