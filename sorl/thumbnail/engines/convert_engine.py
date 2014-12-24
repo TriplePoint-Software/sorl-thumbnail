@@ -1,6 +1,7 @@
 from __future__ import with_statement
 import re
 import os
+import logging
 
 import subprocess
 
@@ -12,6 +13,7 @@ from sorl.thumbnail.engines.base import EngineBase
 
 from tempfile import NamedTemporaryFile
 
+logger = logging.getLogger(__name__)
 
 size_re = re.compile(r'^(?:.+) (?:[A-Z]+) (?P<x>\d+)x(?P<y>\d+)')
 
@@ -72,7 +74,8 @@ class Engine(EngineBase):
         out, err = p.communicate()
 
         if err:
-            raise Exception(err)
+            if err.find('free entry') == -1:
+                raise Exception(err)
 
 
     def cleanup(self, image):
