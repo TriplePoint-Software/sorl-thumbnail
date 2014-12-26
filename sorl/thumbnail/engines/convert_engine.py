@@ -74,6 +74,7 @@ class Engine(EngineBase):
         out, err = p.communicate()
 
         if err:
+            logger.error(err)
             if err.find('free entry') == -1:
                 raise Exception(err)
 
