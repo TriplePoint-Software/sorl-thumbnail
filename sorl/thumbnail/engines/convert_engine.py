@@ -64,7 +64,13 @@ class Engine(EngineBase):
         path, filename = thumbnail.name.rsplit('/', 1)
         abspath = os.path.abspath('media/' + path)
         if not os.path.exists(abspath):
-            os.makedirs(abspath)
+            try:
+                os.makedirs(abspath)
+            except OSError:
+                # because parallel celery processes are working and the directory can come 
+                # into existence after if and before makedirs 
+                # atleast error instances show that there is such a vulnerability
+                pass
         args.append('+adjoin')
         filename, ext = filename.split('.')
         args.append(abspath + os.sep + filename + suffix)
