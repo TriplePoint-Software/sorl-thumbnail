@@ -1,8 +1,14 @@
+from __future__ import unicode_literals
 import os
+
 from sorl.thumbnail.kvstores.base import KVStoreBase
 from sorl.thumbnail.conf import settings
+
+
 try:
     import anydbm as dbm
+except KeyError:
+    import dbm
 except ImportError:
     # Python 3, hopefully
     import dbm
@@ -56,8 +62,8 @@ class KVStore(KVStoreBase):
     # semantics, not performance.  Therefore, use this store only in development
     # environments.
 
-    def __init__(self, *args, **kwargs):
-        super(KVStore, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(KVStore, self).__init__()
         self.filename = settings.THUMBNAIL_DBM_FILE
         self.mode = settings.THUMBNAIL_DBM_MODE
 
@@ -66,7 +72,10 @@ class KVStore(KVStoreBase):
 
     def _get_raw(self, key):
         with DBMContext(self.filename, self.mode, True) as db:
-            return db.get(self._cast_key(key))
+            try:
+                return db[self._cast_key(key)]
+            except KeyError:
+                return None
 
     def _set_raw(self, key, value):
         with DBMContext(self.filename, self.mode, False) as db:
@@ -75,9 +84,10 @@ class KVStore(KVStoreBase):
     def _delete_raw(self, *keys):
         with DBMContext(self.filename, self.mode, False) as db:
             for key in keys:
-                k = self._cast_key(key)
-                if k in db:
-                    del db[k]
+                try:
+                    del db[self._cast_key(key)]
+                except KeyError:
+                    pass
 
     def _find_keys_raw(self, prefix):
         with DBMContext(self.filename, self.mode, True) as db:

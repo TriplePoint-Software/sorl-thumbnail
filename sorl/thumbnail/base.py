@@ -1,7 +1,9 @@
-import logging
+from __future__ import unicode_literals
 
+import logging
 import os
 import re
+
 from sorl.thumbnail.compat import string_type, text_type
 from sorl.thumbnail.conf import settings, defaults as default_settings
 from sorl.thumbnail.helpers import tokey, serialize
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 EXTENSIONS = {
     'JPEG': 'jpg',
     'PNG': 'png',
+    'GIF': 'gif',
 }
 
 
@@ -52,6 +55,8 @@ class ThumbnailBackend(object):
             return 'JPEG'
         elif file_extension == '.png':
             return 'PNG'
+        elif file_extension == '.gif':
+            return 'GIF'
         else:
             from django.conf import settings
 
@@ -63,8 +68,8 @@ class ThumbnailBackend(object):
         options given. First it will try to get it from the key value store,
         secondly it will create it.
         """
-        logger.debug(text_type('Getting thumbnail for file [%s] at [%s]'), file_,
-                     geometry_string)
+        logger.debug(text_type('Getting thumbnail for file [%s] at [%s]'), file_, geometry_string)
+
         if file_:
             source = ImageFile(file_)
         elif settings.THUMBNAIL_DUMMY:
@@ -86,6 +91,7 @@ class ThumbnailBackend(object):
             value = getattr(settings, attr)
             if value != getattr(default_settings, attr):
                 options.setdefault(key, value)
+
         name = self._get_thumbnail_filename(source, geometry_string, options)
         thumbnail = ImageFile(name, default.storage)
         cached = default.kvstore.get(thumbnail)
@@ -97,18 +103,20 @@ class ThumbnailBackend(object):
         # We have to check exists() because the Storage backend does not
         # overwrite in some implementations.
         logger.info("thumbnail.exists: %s" % thumbnail.exists())
-        if not thumbnail.exists():
+        if settings.THUMBNAIL_FORCE_OVERWRITE or not thumbnail.exists():
             try:
                 source_image = default.engine.get_image(source)
-            except IOError:
+            except IOError as e:
+                logger.exception(e)
                 if settings.THUMBNAIL_DUMMY:
                     return DummyImageFile(geometry_string)
                 else:
                     # if S3Storage says file doesn't exist remotely, don't try to
                     # create it and exit early.
                     # Will return working empty image type; 404'd image
-                    logger.warn(text_type('Remote file [%s] at [%s] does not exist'), file_,
-                                geometry_string)
+                    logger.warn(text_type('Remote file [%s] at [%s] does not exist'),
+                                file_, geometry_string)
+
                     return thumbnail
 
             # We might as well set the size since we have the image in memory
@@ -116,6 +124,7 @@ class ThumbnailBackend(object):
             options['image_info'] = image_info
             size = default.engine.get_image_size(source_image)
             source.set_size(size)
+
             try:
                 self._create_thumbnail(source_image, geometry_string, options,
                                        thumbnail)
@@ -195,5 +204,4 @@ class ThumbnailBackend(object):
         key = tokey(source.key, geometry_string, serialize(options))
         # make some subdirs
         path = '%s/%s/%s/%s' % (geometry_string, key[:2], key[2:4], key)
-        return '%s%s.%s' % (settings.THUMBNAIL_PREFIX, path,
-                            EXTENSIONS[options['format']])
+        return '%s%s.%s' % (settings.THUMBNAIL_PREFIX, path, EXTENSIONS[options['format']])
